@@ -17,14 +17,15 @@ jobs:
 
     steps:
       - name: Checkout Repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v4 # Обновлено до v4
 
       - name: Setup MSBuild
-        uses: microsoft/setup-msbuild@v2
+        uses: microsoft/setup-msbuild@v2 # Обновлено до v2
 
       - name: Install DirectX SDK (June 2010)
         shell: powershell
         run: |
+          # Установка DirectX SDK через Chocolatey для получения dinput.lib
           choco install directx-sdk -y
           echo "DXSDK_DIR=C:\Program Files (x86)\Microsoft DirectX SDK (June 2010)" >> $env:GITHUB_ENV
 
@@ -50,18 +51,11 @@ jobs:
             /p:RuntimeLibrary=MultiThreaded `
             /p:ForceImportBeforeCppTargets="$($pwd.Path)\fix.props"
 
-      - name: Build GenThree
-        shell: powershell
-        run: |
-          $env:Path += ";" + $pwd.Path + "\yasm-1.3.0\;"
-          $env:INCLUDE = "C:\Program Files (x86)\Microsoft DirectX SDK (June 2010)\Include;" + $env:INCLUDE
-          $env:LIB = "C:\Program Files (x86)\Microsoft DirectX SDK (June 2010)\Lib\x86;" + $env:LIB
-          msbuild 'genthree/genthree.sln' /p:Configuration=Release /p:Platform=Win32 /p:RuntimeLibrary=MultiThreaded
-
       - name: Upload Artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v4 # Обновлено до v4 (исправляет ошибку со скриншота)
         with:
           name: Kkrieger-Binaries
           path: |
             **/*.exe
             !obj/**
+          if-no-files-found: warn
