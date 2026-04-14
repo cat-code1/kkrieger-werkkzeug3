@@ -5,7 +5,7 @@ on:
     branches: [ "master", "trace" ]
   pull_request:
     branches: [ "master", "trace" ]
-  workflow_dispatch: # Позволяет запускать сборку кнопкой в интерфейсе
+  workflow_dispatch:
 
 env:
   SOLUTION_FILE_PATH: werkkzeug3_kkrieger/wz3projects.sln
@@ -22,19 +22,40 @@ jobs:
       - name: Setup MSBuild
         uses: microsoft/setup-msbuild@v2
 
-      - name: Build Base Console (Required Dependency)
+      - name: Install DirectX SDK
+        shell: powershell
+        run: |
+          $url = "https://download.microsoft.com/download/A/E/7/AE71FE08-591E-4875-92F5-06513A7335C1/DXSDK_Jun10.exe"
+          Invoke-WebRequest -Uri $url -OutFile "dxsdk.exe"
+          Start-Process -FilePath ".\dxsdk.exe" -ArgumentList "/silent" -Wait
+          # Устанавливаем переменную окружения для MSBuild
+          echo "DXSDK_DIR=C:\Program Files (x86)\Microsoft DirectX SDK (June 2010)" >> $env:GITHUB_ENV
+
+      - name: Build Base Console
         run: |
           $env:Path += ";" + $pwd.Path + "\yasm-1.3.0\;";
+          $env:LIB += ";$env:DXSDK_DIR\Lib\x86";
+          $env:INCLUDE += ";$env:DXSDK_DIR\Include";
           msbuild 'werkkzeug3_kkrieger/base_console/base_console.vcxproj' /p:Configuration=Release /p:Platform=Win32
 
       - name: Build Werkkzeug Solution
         run: |
           $env:Path += ";" + $pwd.Path + "\yasm-1.3.0\;";
-          msbuild ${{ env.SOLUTION_FILE_PATH }} /p:Configuration=Release /p:Platform=x86 /p:BuildProjectReferences=true
+          # Пробрасываем пути к DirectX SDK в системные переменные LIB и INCLUDE
+          $env:LIB += ";$env:DXSDK_DIR\Lib\x86";
+          $env:INCLUDE += ";$env:DXSDK_DIR\Include";
+          
+          msbuild ${{ env.SOLUTION_FILE_PATH }} `
+            /p:Configuration=Release `
+            /p:Platform=x86 `
+            /p:BuildProjectReferences=true `
+            /p:ForceImportBeforeCppTargets="$($pwd.Path)\fix.props"
 
       - name: Build GenThree
         run: |
           $env:Path += ";" + $pwd.Path + "\yasm-1.3.0\;";
+          $env:LIB += ";$env:DXSDK_DIR\Lib\x86";
+          $env:INCLUDE += ";$env:DXSDK_DIR\Include";
           msbuild 'genthree/genthree.sln' /p:Configuration=Release /p:Platform=Win32
 
       - name: Upload Artifacts
@@ -44,4 +65,3 @@ jobs:
           path: |
             **/*.exe
             !obj/**
-          if-no-files-found: error
