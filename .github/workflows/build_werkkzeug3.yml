@@ -17,37 +17,38 @@ jobs:
 
     steps:
       - name: Checkout Repository
-        uses: actions/checkout@v4 # Обновлено до v4
+        uses: actions/checkout@v4
 
       - name: Setup MSBuild
-        uses: microsoft/setup-msbuild@v2 # Обновлено до v2
+        uses: microsoft/setup-msbuild@v2
 
       - name: Install DirectX SDK (June 2010)
         shell: powershell
         run: |
-          # Используем Chocolatey для гарантированной установки
+          # Успешный метод установки через Chocolatey
           choco install directx-sdk -y
           echo "DXSDK_DIR=C:\Program Files (x86)\Microsoft DirectX SDK (June 2010)" >> $env:GITHUB_ENV
 
-      - name: Build Werkkzeug Solution
+      - name: Build Main Projects (Excluding player_intro)
         shell: powershell
         run: |
-          # 1. Добавляем путь к YASM (убедитесь, что папка называется именно так)
+          # 1. Добавляем путь к YASM
           $env:Path += ";" + $pwd.Path + "\yasm-1.3.0\;"
           
-          # 2. Прописываем пути к установленному DirectX SDK
+          # 2. Прописываем пути к DirectX SDK
           $env:INCLUDE = "C:\Program Files (x86)\Microsoft DirectX SDK (June 2010)\Include;" + $env:INCLUDE
           $env:LIB = "C:\Program Files (x86)\Microsoft DirectX SDK (June 2010)\Lib\x86;" + $env:LIB
           
-          # 3. Собираем решение. 
-          # Мы исключаем player_intro, собирая только нужные цели, либо игнорируя ошибки в нем.
+          # 3. Собираем только основные проекты, чтобы пропустить player_intro
+          # Собираем werkkzeug (редактор) и player_demo (плеер)
+          # Флаг /t (Targets) заставляет MSBuild игнорировать остальные проекты в решении
           msbuild ${{ env.SOLUTION_FILE_PATH }} `
+            /t:werkkzeug;player_demo `
             /p:Configuration=Release `
             /p:Platform=x86 `
             /p:BuildProjectReferences=true `
             /p:RuntimeLibrary=MultiThreaded `
-            /p:ForceImportBeforeCppTargets="$($pwd.Path)\fix.props" `
-            /p:ContinueOnError=ErrorAndContinue
+            /p:ForceImportBeforeCppTargets="$($pwd.Path)\fix.props"
 
       - name: Build GenThree
         shell: powershell
@@ -59,7 +60,7 @@ jobs:
           msbuild 'genthree/genthree.sln' /p:Configuration=Release /p:Platform=Win32 /p:RuntimeLibrary=MultiThreaded
 
       - name: Upload Artifacts
-        uses: actions/upload-artifact@v4 # Обновлено до v4 (исправляет ошибку со скриншота)
+        uses: actions/upload-artifact@v4
         with:
           name: Kkrieger-Werkkzeug-Binaries
           path: |
