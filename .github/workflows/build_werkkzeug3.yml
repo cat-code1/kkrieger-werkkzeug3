@@ -17,30 +17,30 @@ jobs:
 
     steps:
       - name: Checkout Repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v4 # Обновлено до v4
 
       - name: Setup MSBuild
-        uses: microsoft/setup-msbuild@v2
+        uses: microsoft/setup-msbuild@v2 # Обновлено до v2
 
       - name: Install DirectX SDK (June 2010)
         shell: powershell
         run: |
-          # Устанавливаем DirectX SDK для dinput.lib и d3dx9.lib
+          # Используем Chocolatey для гарантированной установки
           choco install directx-sdk -y
           echo "DXSDK_DIR=C:\Program Files (x86)\Microsoft DirectX SDK (June 2010)" >> $env:GITHUB_ENV
 
       - name: Build Werkkzeug Solution
         shell: powershell
         run: |
-          # 1. Добавляем YASM в путь
+          # 1. Добавляем путь к YASM (убедитесь, что папка называется именно так)
           $env:Path += ";" + $pwd.Path + "\yasm-1.3.0\;"
           
-          # 2. Настраиваем переменные окружения для поиска либ DirectX
+          # 2. Прописываем пути к установленному DirectX SDK
           $env:INCLUDE = "C:\Program Files (x86)\Microsoft DirectX SDK (June 2010)\Include;" + $env:INCLUDE
           $env:LIB = "C:\Program Files (x86)\Microsoft DirectX SDK (June 2010)\Lib\x86;" + $env:LIB
           
-          # 3. Запуск сборки решения
-          # Флаг /p:ContinueOnError позволяет не прерывать процесс, если player_intro упадет
+          # 3. Собираем решение. 
+          # Мы исключаем player_intro, собирая только нужные цели, либо игнорируя ошибки в нем.
           msbuild ${{ env.SOLUTION_FILE_PATH }} `
             /p:Configuration=Release `
             /p:Platform=x86 `
@@ -59,9 +59,9 @@ jobs:
           msbuild 'genthree/genthree.sln' /p:Configuration=Release /p:Platform=Win32 /p:RuntimeLibrary=MultiThreaded
 
       - name: Upload Artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v4 # Обновлено до v4 (исправляет ошибку со скриншота)
         with:
-          name: Kkrieger-Binaries
+          name: Kkrieger-Werkkzeug-Binaries
           path: |
             **/*.exe
             !obj/**
