@@ -1,38 +1,69 @@
-- name: Build Base Console
+name: build_werkkzeug3
+
+on:
+  push:
+    branches: [ "master", "trace" ]
+  pull_request:
+    branches: [ "master", "trace" ]
+  workflow_dispatch:
+
+env:
+  SOLUTION_FILE_PATH: werkkzeug3_kkrieger/wz3projects.sln
+  BUILD_CONFIGURATION: Release
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup MSBuild
+        uses: microsoft/setup-msbuild@v2
+
+      - name: Install DirectX SDK (June 2010)
+        shell: powershell
+        run: |
+          choco install directx-sdk -y
+          echo "DXSDK_DIR=C:\Program Files (x86)\Microsoft DirectX SDK (June 2010)" >> $env:GITHUB_ENV
+
+      - name: Build Base Console
         shell: powershell
         run: |
           $env:Path += ";" + $pwd.Path + "\yasm-1.3.0\;"
-          $dxInclude = "C:\Program Files (x86)\Microsoft DirectX SDK (June 2010)\Include"
-          $dxLib = "C:\Program Files (x86)\Microsoft DirectX SDK (June 2010)\Lib\x86"
+          $env:INCLUDE = "C:\Program Files (x86)\Microsoft DirectX SDK (June 2010)\Include;" + $env:INCLUDE
+          $env:LIB = "C:\Program Files (x86)\Microsoft DirectX SDK (June 2010)\Lib\x86;" + $env:LIB
           
           msbuild 'werkkzeug3_kkrieger/base_console/base_console.vcxproj' `
-            /p:Configuration=Release /p:Platform=Win32 `
-            /p:IncludePath="$dxInclude;$(IncludePath)" `
-            /p:LibraryPath="$dxLib;$(LibraryPath)"
+            /p:Configuration=Release /p:Platform=Win32
 
       - name: Build Werkkzeug Solution
         shell: powershell
         run: |
           $env:Path += ";" + $pwd.Path + "\yasm-1.3.0\;"
-          $dxInclude = "C:\Program Files (x86)\Microsoft DirectX SDK (June 2010)\Include"
-          $dxLib = "C:\Program Files (x86)\Microsoft DirectX SDK (June 2010)\Lib\x86"
+          $env:INCLUDE = "C:\Program Files (x86)\Microsoft DirectX SDK (June 2010)\Include;" + $env:INCLUDE
+          $env:LIB = "C:\Program Files (x86)\Microsoft DirectX SDK (June 2010)\Lib\x86;" + $env:LIB
           
           msbuild ${{ env.SOLUTION_FILE_PATH }} `
             /p:Configuration=Release `
             /p:Platform=x86 `
             /p:BuildProjectReferences=true `
-            /p:ForceImportBeforeCppTargets="$($pwd.Path)\fix.props" `
-            /p:IncludePath="$dxInclude;$(IncludePath)" `
-            /p:LibraryPath="$dxLib;$(LibraryPath)"
+            /p:ForceImportBeforeCppTargets="$($pwd.Path)\fix.props"
 
       - name: Build GenThree
         shell: powershell
         run: |
           $env:Path += ";" + $pwd.Path + "\yasm-1.3.0\;"
-          $dxInclude = "C:\Program Files (x86)\Microsoft DirectX SDK (June 2010)\Include"
-          $dxLib = "C:\Program Files (x86)\Microsoft DirectX SDK (June 2010)\Lib\x86"
+          $env:INCLUDE = "C:\Program Files (x86)\Microsoft DirectX SDK (June 2010)\Include;" + $env:INCLUDE
+          $env:LIB = "C:\Program Files (x86)\Microsoft DirectX SDK (June 2010)\Lib\x86;" + $env:LIB
           
-          msbuild 'genthree/genthree.sln' `
-            /p:Configuration=Release /p:Platform=Win32 `
-            /p:IncludePath="$dxInclude;$(IncludePath)" `
-            /p:LibraryPath="$dxLib;$(LibraryPath)"
+          msbuild 'genthree/genthree.sln' /p:Configuration=Release /p:Platform=Win32
+
+      - name: Upload Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: Kkrieger-Werkkzeug-Binaries
+          path: |
+            **/*.exe
+            !obj/**
